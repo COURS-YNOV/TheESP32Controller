@@ -1,0 +1,1 @@
+APP_NAME = 'The ESP32 Controller'
