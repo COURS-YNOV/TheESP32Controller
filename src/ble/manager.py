@@ -6,9 +6,11 @@ class BLEManager:
         self.connected_device = None
         self.found_devices = []
         self.one_device_found = False
+        self.write_char_uuid = "2A19"  # UUID writeCharacteristic
+        self.notify_char_uuid = "2A20" # UUID notifyCharacteristic
 
     async def scan_devices(self):
-        print("⏳ Scanning...")
+        print("⏳ Scanning for BLE devices...")
         devices = await BleakScanner.discover(timeout=5.0)
     
         for device in devices:
@@ -20,7 +22,7 @@ class BLEManager:
         if self.one_device_found:
             print("⏳ Scan complete. New devices listed.\n")
         else:
-            print("❌ No devices found.\n")
+            print("❌ No ESP32 devices found.\n")
             
         return self.found_devices
 
@@ -28,27 +30,31 @@ class BLEManager:
         self.client = BleakClient(device.address)
         try:
             await self.client.connect()
-            if await self.client.is_connected():
+            if self.client.is_connected():
                 self.connected_device = device
-                print(f"Connected to {device.name} [{device.address}]")
+                print(f"🔗 Successfully connected to {device.name} [{device.address}]")
             else:
-                print("❌ Échec de la connexion")
+                print("❌ Failed to establish connection !")
         except Exception as e:
-            print(f"Erreur lors de la connexion : {e}")
+            print(f"❌ Connection error: {e}")
             self.client = None
             self.connected_device = None
 
     async def disconnect(self):
-        if self.client:
+        if self.client and self.client.is_connected:
             await self.client.disconnect()
-            self.client = None
-            self.connected_device = None
-            print("Disconnected !")
+            print("🔌 Disconnected from device")
+        self.client = None
+        self.connected_device = None
 
     async def send_command(self, command):
-        # envoie une commande au device connecté
-        pass
+        if self.client and self.client.is_connected:
+            await self.client.write_gatt_char(self.write_char_uuid, command.encode())
+        else:
+            print("❌ Cannot send command: no device connected.")
 
-    async def receive_message(self):
-        # reçoit une réponse
-        pass
+    async def start_notifications(self, on_message):
+        if self.client and self.client.is_connected:
+            await self.client.start_notify(self.notify_char_uuid, on_message)
+        else:
+            print("❌ Cannot start notifications: device not connected.")
