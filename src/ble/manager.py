@@ -11,6 +11,7 @@ class BLEManager:
 
     async def scan_devices(self):
         print("⏳ Scanning for BLE devices...")
+        self.found_devices.clear()
         devices = await BleakScanner.discover(timeout=5.0)
     
         for device in devices:

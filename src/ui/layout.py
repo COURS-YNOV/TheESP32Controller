@@ -8,39 +8,49 @@ commands_buttons = []
 ui_elements = {}
 
 def build_ui():
-    ui.label(APP_NAME)
+    with ui.row().classes('justify-center w-full'):
+        ui.label(APP_NAME).classes('text-xl font-bold mb-4')
 
-    with ui.row():
-        ui.button('Scan BLE Devices', on_click=on_scan_click)
-    
-    global devices_dropdown
-    devices_dropdown = ui.select(options=[], label='Detected device(s) :', clearable=True)
+    with ui.column().classes('p-4 bg-gray-100 rounded-lg shadow-md items-center w-full'):
+        ui.label('📡 Scan Devices').classes('text-lg font-semibold mb-4')
 
-    with ui.row():
-        ui_elements['connect_button'] = ui.button('Connect', on_click=on_connect_click).props('color=green')
-        ui_elements['disconnect_button'] = ui.button('Disconnect', on_click=on_disconnect_click).props('color=red')
-        ui_elements['connect_button'].disable()
-        ui_elements['disconnect_button'].disable()
+        with ui.row().classes('items-center gap-4'):
+            ui.button('🔍 Scan BLE Devices', on_click=on_scan_click)
+            global devices_dropdown
+            devices_dropdown = ui.select(
+                options=[], 
+                label='Detected device(s) :', 
+                clearable=True
+            ).classes('w-80')  # largeur fixe
 
-    with ui.row():
-        for label, command in [
-            ('LED_R', 'LED_R'),
-            ('LED_G', 'LED_G'),
-            ('BUZZER', 'BUZZER'),
-            ('NTC', 'CTN'),
-            ('INA237', 'INA'),
-            ('TMP126', 'TEMP'),
-            ('SCAN I2C', 'I2C'),
-            ('WRITE LOG', 'W_LOG'),
-            ('READ LOG', 'R_LOG'),
-        ]:
-            btn = ui.button(label, on_click=make_test_command_handler(command))
-            commands_buttons.append(btn) 
-        is_commands_buttons_activable()
+        with ui.row():
+            ui_elements['connect_button'] = ui.button('Connect', on_click=on_connect_click).props('color=green')
+            ui_elements['disconnect_button'] = ui.button('Disconnect', on_click=on_disconnect_click).props('color=red')
+            ui_elements['connect_button'].disable()
+            ui_elements['disconnect_button'].disable()
 
-    global ack_output
-    ack_output = ui.textarea(label='Messages de retour')
-    ack_output.props('readonly')
+    with ui.column().classes('p-4 bg-gray-100 rounded-lg shadow-md items-center w-full'):
+        ui.label('🚀 Launch Tests').classes('text-lg font-semibold mb-4')
+
+        with ui.row().classes('justify-center items-start gap-8 max-w-5xl w-full'):
+            with ui.grid(columns=3).classes('gap-2 min-h-40'):
+                for label, command in [
+                    ('LED_R', 'LED_R'),
+                    ('LED_G', 'LED_G'),
+                    ('BUZZER', 'BUZZER'),
+                    ('NTC', 'CTN'),
+                    ('INA237', 'INA'),
+                    ('TMP126', 'TEMP'),
+                    ('SCAN I2C', 'I2C'),
+                    ('WRITE LOG', 'W_LOG'),
+                    ('READ LOG', 'R_LOG'),
+                ]:
+                    btn = ui.button(label, on_click=make_test_command_handler(command))
+                    commands_buttons.append(btn)
+                    is_commands_buttons_activable()
+
+            global ack_output
+            ack_output = ui.textarea(label='Acknowledgment from ESP32').props('readonly').classes('w-80')
     
 async def on_scan_click():
     global ble_devices
@@ -58,7 +68,6 @@ async def on_scan_click():
         ui_elements['connect_button'].enable()
 
 async def on_connect_click():
-    print("ui_elements:", ui_elements)
     selected_name = devices_dropdown.value
     devices_dropdown.options = [f"{device.name} ({device.address})" for device in ble_devices]
 
@@ -104,7 +113,10 @@ def make_test_command_handler(command: str):
 async def on_receive(_, data: bytearray):
     message = data.decode()
     print(f"📩 From ESP32 : {message}")
-    #acknowledge_output.set_text(message)  # Mettre à jour une zone texte NiceGUI
+    global ack_output
+    ack_output.value = (ack_output.value or '') + message + '\n'
+    ack_output.update()
+    # TODO add function to automatically scroll at the bottom of the field 
 
 def is_commands_buttons_activable(state = False):
       for btn in commands_buttons:
