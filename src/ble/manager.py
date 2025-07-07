@@ -33,6 +33,7 @@ class BLEManager:
             await self.client.connect()
             if self.client.is_connected():
                 self.connected_device = device
+                # TODO add an handler to detect a deconnection
                 print(f"🔗 Successfully connected to {device.name} [{device.address}]")
             else:
                 print("❌ Failed to establish connection !")
