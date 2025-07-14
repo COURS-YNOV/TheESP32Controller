@@ -10,4 +10,5 @@ UI_COMMANDS_BUTTON = [
                     ('WRITE LOG', 'W_LOG'),
                     ('READ LOG', 'R_LOG'),
                 ]
-UI_COMMAND_SLIDER_BUTTON = 'PWM'
+UI_COMMAND_SLIDER_BUTTON = 'PWM_'
+UI_COMMAND_FREE_TEXT_BUTTON = 'FREE_TEXT_'
