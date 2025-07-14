@@ -1,6 +1,6 @@
 from nicegui import ui
 from ble.manager import BLEManager
-from config.config import APP_NAME, UI_COMMANDS_BUTTON, UI_COMMAND_SLIDER_BUTTON
+from config.config import APP_NAME, UI_COMMANDS_BUTTON, UI_COMMAND_SLIDER_BUTTON, UI_COMMAND_FREE_TEXT_BUTTON
 
 ble_devices = []
 ble_manager = BLEManager()
@@ -54,9 +54,10 @@ def build_ui():
                 with ui.row().classes('items-center gap-4 w-full'):
                     slider = ui.slider(min=0, max=100, value=50).props('label-always') \
                         .classes('flex-1 mt-5')
-                    btn_pwm = ui.button("SEND", on_click=make_test_command_handler(UI_COMMAND_SLIDER_BUTTON)) \
+                    btn_pwm = ui.button("SEND", on_click=make_test_command_handler(lambda: UI_COMMAND_SLIDER_BUTTON + str(slider.value))) \
                         .classes('h-12')
-                    ui_commands.extend([slider, btn_pwm])
+                    ui_commands.append(slider)
+                    ui_commands.append(btn_pwm)
             
             # --- Free Text Section ---
             with ui.column().classes('gap-4 p-4 rounded-lg shadow-md w-full').style('background-color: #f2f3ff'):
@@ -66,9 +67,11 @@ def build_ui():
                     input_cmd = ui.input(label='Command', placeholder='Start typing') \
                         .props('clearable dense') \
                         .classes('w-44 h-12')
-                    btn_txt = ui.button("SEND", on_click=lambda: make_test_command_handler(input_cmd.value)()) \
+                    btn_txt = ui.button("SEND", on_click=lambda: make_test_command_handler(lambda: UI_COMMAND_FREE_TEXT_BUTTON + str(input_cmd.value))()) \
                         .classes('h-12')
-                    ui_commands.extend([input_cmd, btn_txt])        
+                    ui_commands.append(input_cmd)
+                    ui_commands.append(btn_txt)
+                 
     
     is_ui_commands_activable()
 
@@ -106,8 +109,9 @@ async def on_connect_click():
             await ble_manager.start_notifications(on_receive)
             is_ui_commands_activable(True)
             ui_elements['disconnect_button'].enable()
-            ui_elements['connect_button'].enable()
+            ui_elements['connect_button'].disable()
             set_scan_section_background(True)
+            ble_manager.on_disconnect_callback = handle_disconnect
             ui.notify(f'🔗 Connected to {selected_name}', color='green')
         except Exception as e:
             ui.notify(f'❌ Connexion error : {e}', color='red')
@@ -117,6 +121,7 @@ async def on_disconnect_click():
         await ble_manager.disconnect()
         is_ui_commands_activable(False)
         set_scan_section_background()
+        ui_elements['disconnect_button'].disable()
         ui.notify(f'❌ Device deconnected !', color='blue')
     except Exception as e:
         ui.notify(f'❌ Device deconnected : {e}', color='red')
@@ -124,13 +129,14 @@ async def on_disconnect_click():
 def make_test_command_handler(command: str):
     async def handler():
         try:
+            cmd_str = command() if callable(command) else command
             if(ble_manager.client != None):
-                await ble_manager.send_command(command)
-                ui.notify(f'✔️ Command "{command}" sent!', color='blue')
+                await ble_manager.send_command(cmd_str)
+                ui.notify(f'✔️ Command "{cmd_str}" sent!', color='blue')
             else:
                 ui.notify(f'📵 No device connected !', color='blue')
         except Exception as e:
-            ui.notify(f'❌ Failed to send "{command}" : {e}', color='red')
+            ui.notify(f'❌ Failed to send "{cmd_str}" : {e}', color='red')
     return handler
 
 async def on_receive(_, data: bytearray):
@@ -155,3 +161,10 @@ def set_scan_section_background(is_connected=False):
         scan_section.style('background-color: #FFE5E5; border: 2px solid #FF6666;')
     else:
         scan_section.style('background-color: #E5FFE5; border: 2px solid #66CC66;')
+
+async def handle_disconnect():
+    print("⚠️ UI notified of BLE disconnection.")
+    is_ui_commands_activable(False)
+    ui_elements['disconnect_button'].disable()
+    ui_elements['connect_button'].enable()
+    set_scan_section_background(False)

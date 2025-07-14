@@ -8,6 +8,7 @@ class BLEManager:
         self.one_device_found = False
         self.write_char_uuid = "2A19"  # UUID writeCharacteristic
         self.notify_char_uuid = "2A20" # UUID notifyCharacteristic
+        self.on_disconnect_callback = None
 
     async def scan_devices(self):
         print("⏳ Scanning for BLE devices...")
@@ -28,12 +29,12 @@ class BLEManager:
         return self.found_devices
 
     async def connect(self, device):
-        self.client = BleakClient(device.address)
+        print(f"connect click")
+        self.client = BleakClient(device.address, disconnected_callback=self.on_disconnected)
         try:
             await self.client.connect()
-            if self.client.is_connected():
+            if self.client.is_connected:
                 self.connected_device = device
-                # TODO add an handler to detect a deconnection
                 print(f"🔗 Successfully connected to {device.name} [{device.address}]")
             else:
                 print("❌ Failed to establish connection !")
@@ -49,6 +50,16 @@ class BLEManager:
         self.client = None
         self.connected_device = None
 
+    def on_disconnected(self, client):
+        print("📴 Device disconnected!")
+        self.connected_device = None
+        self.client = None
+
+        # Déclencher la mise à jour de l'interface (async)
+        if self.on_disconnect_callback:
+            import asyncio
+            asyncio.create_task(self.on_disconnect_callback())
+
     async def send_command(self, command):
         if self.client and self.client.is_connected:
             await self.client.write_gatt_char(self.write_char_uuid, command.encode())
@@ -60,3 +71,8 @@ class BLEManager:
             await self.client.start_notify(self.notify_char_uuid, on_message)
         else:
             print("❌ Cannot start notifications: device not connected.")
+
+    # def on_disconnected(self, client):
+    #     if self.on_disconnect_callback:
+    #         import asyncio
+    #         asyncio.create_task(self.on_disconnect_callback())
