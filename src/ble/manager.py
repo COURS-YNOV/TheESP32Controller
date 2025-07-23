@@ -16,7 +16,7 @@ class BLEManager:
         devices = await BleakScanner.discover(timeout=5.0)
     
         for device in devices:
-            if device.name and device.name.startswith("ESP32"):
+            if device.name and device.name.startswith("YNOV"):
                 print(f"📡 Found: {device.name} - {device.address}")
                 self.one_device_found = True
                 self.found_devices.append(device)
